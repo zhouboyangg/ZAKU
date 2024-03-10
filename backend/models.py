@@ -1,23 +1,42 @@
 from beanie import Document
-from pydantic import BaseModel, Field
-from datetime import datetime
-from typing import List, Optional
+from pydantic import Field
+from typing import List, Dict, Optional
+from enum import Enum
 
-class Message(BaseModel):
-    sender: str
-    message: str
-    timestamp: datetime
+class QueryRoleType(str, Enum):
+    system = "system"
+    user = "user"
+    assistant = "assistant"
+    function = "function"
+
+class Prompt(Document):
+    role: QueryRoleType
+    content: str
 
 class Conversation(Document):
-    conversationId: str = Field(default_factory=str)
-    createdAt: datetime = Field(default_factory=datetime.now)
-    updatedAt: datetime = Field(default_factory=datetime.now)
-    status: str
-    messages: List[Message] = []
+    id: Optional[str] = Field(default=None, alias="_id")
+    name: str = Field(..., max_length=200)
+    params: Dict = Field(default={})
+    tokens: Optional[int] = Field(default=0, ge=0)
+    messages: List[Prompt] = Field(default=[])
 
-class QueryResponse(Document):
-    queryId: str = Field(default_factory=str)
-    queryText: str
-    response: str
-    createdAt: datetime = Field(default_factory=datetime.now)
-    updatedAt: datetime = Field(default_factory=datetime.now)
+    class Settings:
+        name = "Conversation"
+
+class ConversationPOST(Document):
+    name: str = Field(..., max_length=200)
+    params: Dict = Field(default={})
+    model: str = Field(...)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "My Conversation",
+                "params": {},
+                "model": "default_model"
+            }
+        }
+
+class ConversationPUT(Document):
+    name: Optional[str] = Field(None, max_length=200)
+    params: Optional[Dict] = Field(None)

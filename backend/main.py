@@ -1,40 +1,33 @@
-from fastapi import FastAPI, HTTPException
-from .init import app  # Import the FastAPI app instance
-from .models import Conversation, QueryResponse  # Import the Beanie models
-from typing import List
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from beanie import init_beanie
+from motor.motor_asyncio import AsyncIOMotorClient
+from models import Conversation
+from routes import router as api_router
 
-@app.post("/conversations", response_model=Conversation)
-async def create_conversation(conversation: Conversation):
-    await conversation.save()
-    return conversation
+app = FastAPI(title="Test Project", version="1.0")
+# Database Configuration
+DATABASE_URL = "mongodb+srv://zhouboyangg:HN4iSnp4aDMZUxCm@zaku.xdaco00.mongodb.net/?authMechanism=DEFAULT"
+client = AsyncIOMotorClient(DATABASE_URL)
+db = client["ZAKU"] 
 
-@app.get("/conversations", response_model=List[Conversation])
-async def get_conversations():
-    return await Conversation.find_all().to_list()
+@app.on_event("startup")
+async def startup_event():
+    await init_beanie(database=db, document_models=[Conversation])
 
-@app.get("/conversations/{conversation_id}", response_model=Conversation)
-async def get_conversation(conversation_id: str):
-    conversation = await Conversation.get(conversation_id)
-    if conversation:
-        return conversation
-    raise HTTPException(status_code=404, detail="Conversation not found")
+# Setup CORS
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
 
-@app.put("/conversations/{conversation_id}", response_model=Conversation)
-async def update_conversation(conversation_id: str, updated_conversation: Conversation):
-    conversation = await Conversation.get(conversation_id)
-    if conversation:
-        conversation.update(updated_conversation)
-        await conversation.save()
-        return conversation
-    raise HTTPException(status_code=404, detail="Conversation not found")
-
-@app.delete("/conversations/{conversation_id}")
-async def delete_conversation(conversation_id: str):
-    conversation = await Conversation.get(conversation_id)
-    if conversation:
-        await conversation.delete()
-        return {"message": "Conversation deleted successfully"}
-    raise HTTPException(status_code=404, detail="Conversation not found")
-
-  
+# Include API Router
+app.include_router(api_router)
 
