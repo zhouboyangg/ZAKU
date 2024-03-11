@@ -18,8 +18,8 @@ async def create_conversation(conversation_data: Conversation):
 
 @router.get("/conversations", response_model=List[Conversation])
 async def get_conversations():
-    conversations = await Conversation.find().to_list()
-    return conversations
+    return await Conversation.find().to_list()
+    # return conversations
 
 @router.get("/conversations/{conversation_id}", response_model=Conversation)
 async def get_conversation(conversation_id: str):
